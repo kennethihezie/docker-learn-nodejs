@@ -11,7 +11,7 @@ ARG NODE_VERSION=24.0.0
 FROM node:${NODE_VERSION}-alpine
 
 # Use production node environment by default.
-ENV NODE_ENV production
+ENV NODE_ENV=production
 
 WORKDIR /usr/src/app
 
@@ -34,7 +34,7 @@ COPY . .
 EXPOSE 3000
 
 # Run the application.
-CMD node src/server.js
+CMD ["node", "src/server.js"]
 
 # a container is a running instance of an image
 # an image is the artifact produce from a docker app
@@ -57,7 +57,7 @@ CMD node src/server.js
 # docker --help: for terminal docs 
 # docker <command> --help: to get docs on a particular command
 # docker run --name <new container name> -d nginx:1.25.3: to add a name to the container instead of auto generated name 
-# docker build -t node-app:1.0.0 . -build a docker image from the working directory
+# docker build -t node-app:1.0.0 . ==== build a docker image from the working directory
 # docker exec -it <containerID> /bin/bash or /bin/sh: Open interactive terminal inside the container.
 # docker run -it nginx bash:  Open interactive terminal inside the container
 # exit: to exit from the interactive terminal.
