@@ -1,0 +1,80 @@
+name: "CI_CD PIPELINE"
+
+on:
+    push:
+        branches:
+            - main
+
+env:
+    NODE_VERSION: 24.0.0
+    AWS_DEFAULT_REGION: us-east-1
+    ECR_REPOSITORY: collins/docker-nodejs-learn
+    AWS_ACCOUNT_ID: 664631055366
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Use Nodejs
+              uses: actions/setup-node@v3
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+
+            - name: Install dependencies
+              run: npm install
+
+            - id: build
+              run: npm run build
+
+            - id: test
+              run: npm run test
+
+    push-to-ecr:
+        runs-on: ubuntu-latest
+        needs: build
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v2
+
+            - name: Configure Aws Credentials
+              uses: aws-actions/configure-aws-credentials@v2
+              with:
+                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                  aws-region: ${{ env.AWS_DEFAULT_REGION }}
+
+            - name: Login to AWS ECR
+              run: |
+                  aws ecr get-login-password --region ${{ env.AWS_DEFAULT_REGION }} | docker login --username AWS --password-stdin ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_DEFAULT_REGION }}.amazonaws.com
+
+            - id: push-to-ecr
+              run: |
+                  docker build -t ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_DEFAULT_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest .
+                  docker push ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_DEFAULT_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
+
+
+    deploy:
+        runs-on: ubuntu-latest
+        needs: push-to-ecr
+
+        steps:
+            - name: Deploy to server
+              uses: appleboy/ssh-action@master
+              with:
+                host: ${{ secrets.HOST }}
+                username: ${{ secrets.USERNAME }}
+                key: ${{ secrets.PRIVATE_KEY }}
+                script: |
+                  cd /app
+                  aws ecr get-login-password --region ${{ env.AWS_DEFAULT_REGION }} | docker login --username AWS --password-stdin ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_DEFAULT_REGION }}.amazonaws.com
+                  docker pull ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_DEFAULT_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
+                  docker-compose down
+                  docker-compose up -d
+                  echo "Deploy successful"
+
+
+
+
