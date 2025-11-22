@@ -9,7 +9,7 @@
 # https://github.com/docker/awesome-compose
 services:
   server:
-    image: collins/docker-learn-nodejs
+    image: collins/docker-nodejs-learn
     env_file: .env
     ports:
       - 3000:3000
